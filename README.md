@@ -8,6 +8,14 @@
 ![Three.js](https://img.shields.io/badge/Three.js-r128-000000?logo=threedotjs&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Gemini_2.5_Flash-Vision-4285F4?logo=google&logoColor=white)
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screen-analysis.jpeg" width="280" alt="AI Analysis" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="docs/screen-configurator.jpeg" width="280" alt="3D Configurator" />
+</p>
+
 ## How It Works
 
 ```
@@ -24,8 +32,8 @@
 
 ```bash
 # 1. Clone
-git clone https://github.com/MarcosMatsuda/furniture-vision.git
-cd furniture-vision
+git clone https://github.com/MarcosMatsuda/furniture-vision-mvp.git
+cd furniture-vision-mvp
 
 # 2. Install
 npm install
