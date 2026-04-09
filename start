@@ -1,0 +1,85 @@
+#!/bin/bash
+# ═══════════════════════════════════════════
+# Furniture Vision — Start script
+# API (3335) + Expo Metro (8082)
+# ═══════════════════════════════════════════
+
+echo ""
+echo "📐 Furniture Vision — Starting..."
+echo ""
+
+# Kill existing processes on used ports
+for port in 3335 8082; do
+  pid=$(lsof -ti:$port 2>/dev/null)
+  if [ -n "$pid" ]; then
+    kill -9 $pid 2>/dev/null
+    echo "   Killed process on port $port"
+  fi
+done
+
+sleep 1
+
+# ─── Check npm ───────────────────────────
+if which npm > /dev/null 2>&1; then
+  echo "   npm installed"
+else
+  echo "   npm not found — install Node.js"
+  exit 1
+fi
+
+# ─── Check apps/api/.env ─────────────────
+API_ENV="$(dirname "$0")/apps/api/.env"
+if [ -f "$API_ENV" ]; then
+  echo "   apps/api/.env configured"
+  source "$API_ENV"
+  export GEMINI_API_KEY
+else
+  echo "   apps/api/.env missing — copying from .env.example"
+  cp "$(dirname "$0")/apps/api/.env.example" "$API_ENV"
+  echo "   Edit apps/api/.env and add your GEMINI_API_KEY"
+fi
+
+# ─── Check Gemini key ────────────────────
+if [ -n "$GEMINI_API_KEY" ] && [ "$GEMINI_API_KEY" != "your-gemini-api-key" ]; then
+  _tail=$(echo "$GEMINI_API_KEY" | sed 's/.*\(.\{5\}\)$/\1/')
+  echo "   Gemini API key configured (...${_tail})"
+else
+  echo "   WARNING: GEMINI_API_KEY not set — get one free at https://aistudio.google.com/apikeys"
+fi
+
+# ─── Check apps/mobile/.env ──────────────
+MOBILE_ENV="$(dirname "$0")/apps/mobile/.env"
+if [ ! -f "$MOBILE_ENV" ]; then
+  echo "EXPO_PUBLIC_API_URL=http://localhost:3335" > "$MOBILE_ENV"
+  echo "   Created apps/mobile/.env"
+fi
+
+# ─── Install dependencies ────────────────
+if [ ! -d "$(dirname "$0")/node_modules" ]; then
+  echo ""
+  echo "   Installing dependencies..."
+  npm install --prefix "$(dirname "$0")"
+fi
+
+echo ""
+echo "   Starting services..."
+echo ""
+echo "   API:          http://localhost:3335"
+echo "   Expo Metro:   http://localhost:8082"
+echo ""
+
+# ─── Set ports and start ─────────────────
+export PORT=3335
+export EXPO_PORT=8082
+
+cd "$(dirname "$0")"
+
+# API in background, Expo in foreground (QR code visible)
+npm run api > /tmp/furniture-vision-api.log 2>&1 &
+API_PID=$!
+echo "   API running in background (PID $API_PID)"
+echo "   API logs: tail -f /tmp/furniture-vision-api.log"
+echo ""
+
+sleep 3
+npm run mobile

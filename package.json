@@ -1,0 +1,22 @@
+{
+  "name": "furniture-vision",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "mobile": "npm run start --workspace=apps/mobile",
+    "api": "npm run dev --workspace=apps/api",
+    "dev": "concurrently \"npm run api\" \"npm run mobile\""
+  },
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "typescript": "~5.6.0"
+  }
+}

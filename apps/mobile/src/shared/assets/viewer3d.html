@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<style>*{margin:0;padding:0}body{overflow:hidden;touch-action:none;background:#ebe6dc}canvas{display:block;width:100%;height:100%}</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+let C={w:0.8,h:1.8,d:0.3,shelves:4,material:'branco'};
+const WOODS={branco:0xf0ebe2,carvalho:0xc4a265,tabaco:0x6b4226,preto:0x2a2a2a,freijo:0xa07850,nogueira:0x5c3d2e,cinza:0x9e9a92,amendoa:0xd4b896,canela:0x8b5e3c};
+const T=0.018;
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0xebe6dc);
+scene.fog=new THREE.Fog(0xebe6dc,5,16);
+const camera=new THREE.PerspectiveCamera(32,window.innerWidth/window.innerHeight,.1,50);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(window.innerWidth,window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xfff8f0,.45));
+scene.add(new THREE.HemisphereLight(0xfff5e6,0xc8bfa8,.35));
+const dir=new THREE.DirectionalLight(0xfff5e8,.75);dir.position.set(2.5,4,3);dir.castShadow=true;
+dir.shadow.mapSize.set(1024,1024);dir.shadow.camera.near=.5;dir.shadow.camera.far=15;
+dir.shadow.camera.left=-3;dir.shadow.camera.right=3;dir.shadow.camera.top=3;dir.shadow.camera.bottom=-3;
+dir.shadow.bias=-0.001;dir.shadow.radius=3;scene.add(dir);
+scene.add(new THREE.DirectionalLight(0xe8e0d4,.25).translateX(-2).translateY(2).translateZ(-1));
+
+const flr=new THREE.Mesh(new THREE.PlaneGeometry(14,14),new THREE.MeshStandardMaterial({color:0xd8d2c6,roughness:.85}));
+flr.rotation.x=-Math.PI/2;flr.receiveShadow=true;scene.add(flr);
+const wll=new THREE.Mesh(new THREE.PlaneGeometry(14,5),new THREE.MeshStandardMaterial({color:0xe5e0d8,roughness:.9}));
+wll.position.set(0,2.5,-1);wll.receiveShadow=true;scene.add(wll);
+
+function mkTex(color,s=512){const c=document.createElement('canvas');c.width=s;c.height=s;const x=c.getContext('2d');const r=(color>>16)&0xff,g=(color>>8)&0xff,b=color&0xff;x.fillStyle=`rgb(${r},${g},${b})`;x.fillRect(0,0,s,s);for(let i=0;i<80;i++){const y=Math.random()*s;x.strokeStyle=`rgba(${r-8},${g-8},${b-10},${.07+Math.random()*.07})`;x.lineWidth=.5+Math.random()*1.2;x.beginPath();x.moveTo(0,y);let p=0;while(p<s){const n=p+15+Math.random()*25;x.quadraticCurveTo(p+8,y+(Math.random()-.5)*2,n,y+(Math.random()-.5)*3);p=n;}x.stroke();}const d=x.getImageData(0,0,s,s);for(let i=0;i<d.data.length;i+=4){const n=(Math.random()-.5)*5;d.data[i]+=n;d.data[i+1]+=n;d.data[i+2]+=n;}x.putImageData(d,0,0);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(1.5,1.5);return t;}
+
+let matCache={};
+function getMat(key,color){if(matCache[key])return matCache[key];const m=new THREE.MeshStandardMaterial({map:mkTex(color),roughness:.6,metalness:.02});matCache[key]=m;return m;}
+const matBack=new THREE.MeshStandardMaterial({color:0xd5d0c8,roughness:.7});
+
+const group=new THREE.Group();scene.add(group);
+
+function bx(w,h,d,m){const g=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);g.castShadow=true;g.receiveShadow=true;return g;}
+function pl(mesh,x,y,z){mesh.position.set(x,y,z);group.add(mesh);return mesh;}
+
+function build(){
+  while(group.children.length)group.remove(group.children[0]);
+  matCache={};
+  const wc=WOODS[C.material]||0xf0ebe2;
+  const mat=getMat('main',wc);
+  const matI=getMat('inner',wc-0x050505);
+  const hw=C.w/2,hd=C.d/2;
+  wll.position.z=-hd-0.01;
+
+  // Shell: base, sides, top, back
+  pl(bx(C.w,T,C.d,mat),0,T/2,0);
+  pl(bx(T,C.h-T,C.d,mat),-hw+T/2,(C.h-T)/2+T,0);
+  pl(bx(T,C.h-T,C.d,mat),hw-T/2,(C.h-T)/2+T,0);
+  pl(bx(C.w,T,C.d,mat),0,C.h-T/2,0);
+  pl(bx(C.w-T*2,C.h-T*2,0.006,matBack),0,C.h/2,-hd+0.003);
+
+  // Shelves
+  if(C.shelves>0){
+    const innerW=C.w-T*2;
+    const botY=T*2,topY=C.h-T*2;
+    const space=(topY-botY)/(C.shelves+1);
+    for(let i=1;i<=Math.min(C.shelves,12);i++){
+      pl(bx(innerW,T*0.7,C.d-0.02,matI),0,botY+space*i,0);
+    }
+  }
+}
+
+// Camera orbit
+let isDrag=false,prevX=0,prevY=0,camT=Math.PI/5,camP=Math.PI/7,camD=3.5;
+function updateCam(){
+  const ch=C.h*.42;
+  camera.position.x=camD*Math.sin(camT)*Math.cos(camP);
+  camera.position.y=camD*Math.sin(camP)+ch;
+  camera.position.z=camD*Math.cos(camT)*Math.cos(camP);
+  camera.lookAt(0,ch,0);
+}
+renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prevX=e.clientX;prevY=e.clientY});
+window.addEventListener('pointermove',e=>{if(!isDrag)return;camT-=(e.clientX-prevX)*.006;camP=Math.max(.05,Math.min(Math.PI/2.5,camP+(e.clientY-prevY)*.004));prevX=e.clientX;prevY=e.clientY;updateCam()});
+window.addEventListener('pointerup',()=>isDrag=false);
+renderer.domElement.addEventListener('wheel',e=>{camD=Math.max(1.2,Math.min(8,camD+e.deltaY*.002));updateCam();e.preventDefault()},{passive:false});
+let lastTD=0;
+renderer.domElement.addEventListener('touchstart',e=>{if(e.touches.length===2)lastTD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);else if(e.touches.length===1){isDrag=true;prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;}},{passive:true});
+renderer.domElement.addEventListener('touchmove',e=>{if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);camD=Math.max(1.2,Math.min(8,camD-(d-lastTD)*.008));lastTD=d;updateCam();}else if(isDrag&&e.touches.length===1){camT-=(e.touches[0].clientX-prevX)*.006;camP=Math.max(.05,Math.min(Math.PI/2.5,camP+(e.touches[0].clientY-prevY)*.004));prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;updateCam();}},{passive:true});
+renderer.domElement.addEventListener('touchend',()=>isDrag=false);
+window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight)});
+
+window.addEventListener('message',e=>{try{const msg=JSON.parse(e.data);if(msg.type==='UPDATE_CONFIG'){
+  const p=msg.payload;
+  C.w=(p.dimensions?.width||80)/100;C.h=(p.dimensions?.height||180)/100;C.d=(p.dimensions?.depth||30)/100;
+  C.shelves=p.shelves??4;C.material=p.material||'branco';
+  camD=Math.max(C.w,C.h)*1.8+0.5;
+  build();updateCam();
+}else if(msg.type==='SNAPSHOT'){
+  renderer.render(scene,camera);
+  const dataUrl=renderer.domElement.toDataURL('image/png');
+  window.ReactNativeWebView?.postMessage(JSON.stringify({type:'SNAPSHOT_RESULT',data:dataUrl}));
+}}catch(err){}});
+
+document.addEventListener('message',e=>{try{window.dispatchEvent(new MessageEvent('message',{data:e.data}));}catch(err){}});
+
+function animate(){requestAnimationFrame(animate);renderer.render(scene,camera);}
+build();updateCam();animate();
+setTimeout(()=>{window.ReactNativeWebView?.postMessage(JSON.stringify({type:'READY'}));},500);
+</script>
+</body>
+</html>
