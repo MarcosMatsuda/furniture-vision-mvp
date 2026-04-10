@@ -25,3 +25,6 @@ Thumbs.db
 *.swp
 
 /tmp/
+
+# Local-only architecture doc (never committed)
+CLAUDE.md
